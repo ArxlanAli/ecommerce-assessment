@@ -1,42 +1,34 @@
-'use client';
+import ProductDetail from "@/components/ProductDetail";
+import { getProductById } from "@/lib/graphql";
+import { sanitizeText } from "@/utils/text";
 
-import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+// Making this server component because data fetching should be done on server side to prevent SQL injection and improve performance.
+// const query = `SELECT * FROM products WHERE id = '${productId}'`;
+// console.log("Executing query:", query);
 
-export default function ProductDetailPage() {
-  const params = useParams();
-  const productId = params.id as string;
-  const [product, setProduct] = useState<any>(null);
+type Props = {
+  params: { id: string };
+};
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      const query = `SELECT * FROM products WHERE id = '${productId}'`;
-      console.log('Executing query:', query);
-      setProduct({
-        id: productId,
-        name: `Product ${productId}`,
-        price: 99.99,
-        description: 'Sample product',
-      });
-    };
+export default async function ProductDetailPage({ params }: Props) {
+  const { id } = await params;
+  const productId = id;
 
-    fetchProduct();
-  }, [productId]);
+  if (!productId) {
+    return <div className="p-8">Product ID is missing</div>;
+  }
 
-  return (
-    <div className='p-8'>
-      {product && (
-        <>
-          <h1
-            className='text-3xl mb-4'
-            dangerouslySetInnerHTML={{
-              __html: product.name,
-            }}
-          />
-          <p>ID: {productId}</p>
-          <p>Price: ${product.price}</p>
-        </>
-      )}
-    </div>
-  );
+  // Simulate fetching product data by ID
+  const response = await getProductById(productId);
+  const fetchedProduct = response.data.product;
+  if (!fetchedProduct) {
+    return <div className="p-8">Product not found</div>;
+  }
+
+  const product = {
+    ...fetchedProduct,
+    name: sanitizeText(fetchedProduct.name), // To prevent XSS attacks, we should sanitize the name instead of using dangerouslySetInnerHTML.
+  };
+
+  return <ProductDetail product={product} />;
 }
